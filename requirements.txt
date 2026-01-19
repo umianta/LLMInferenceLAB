@@ -1,0 +1,10 @@
+streamlit 
+transformers 
+torch 
+openai 
+plotly
+seaborn 
+matplotlib 
+pandas 
+streamlit-aggrid
+bertviz 
