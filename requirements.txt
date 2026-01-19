@@ -8,3 +8,4 @@ matplotlib
 pandas 
 streamlit-aggrid
 bertviz 
+sklearn
