@@ -1045,6 +1045,72 @@ st.markdown("""
     button, [role="button"], input, select, textarea {
         transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
     }
+
+    /* Mobile-first base styles */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #fff;
+      color: #222;
+    }
+
+    .container {
+      width: 100%;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+
+    /* Responsive typography */
+    h1, h2, h3, h4, h5, h6 {
+      margin: 0.5em 0;
+      font-weight: 600;
+    }
+
+    /* Responsive images */
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Buttons and inputs */
+    button, input, select, textarea {
+      font-size: 1rem;
+      padding: 0.5em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 1em;
+    }
+
+    /* Layout for larger screens */
+    @media (min-width: 600px) {
+      .container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      }
+    }
+
+    /* Navigation bar (example) */
+    .navbar {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      background: #c00;
+      color: #fff;
+      padding: 1em;
+    }
+    @media (min-width: 600px) {
+      .navbar {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1321,7 +1387,7 @@ def concept_card(title, description, examples=None):
                 border-left: 6px solid #667eea;
                 border-radius: 16px;
                 padding: 1.75rem;
-                margin: 1.5rem 0;
+                margin-bottom: 2rem;
                 box-shadow: 0 4px 15px rgba(102,126,234,0.12);
                 animation: slideInRight 0.5s ease;'>
         <h4 style='color: #667eea; margin: 0 0 0.75rem 0; font-weight: 800; font-size: 1.15rem;'>📚 {title}</h4>
@@ -1929,7 +1995,8 @@ if sections["Debug Summary"]:
                 border-radius: 16px;
                 padding: 1.75rem;
                 margin-bottom: 2rem;
-                box-shadow: 0 4px 15px rgba(102,126,234,0.12);'>
+                box-shadow: 0 4px 15px rgba(102,126,234,0.12);
+                animation: slideInRight 0.5s ease;'>
         <h4 style='color: #667eea; margin: 0 0 0.75rem 0; font-weight: 800; font-size: 1.15rem;'>📚 What You're Learning</h4>
         <p style='color: #2d3748; margin: 0.5rem 0; line-height: 1.7; font-size: 0.95rem;'>
             This lab teaches you about the internal mechanisms of Large Language Models: how text is tokenized, 
