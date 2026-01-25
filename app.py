@@ -27,8 +27,23 @@ import time
 st.set_page_config(
     page_title="LLM Inference Learning Lab",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto",
+    menu_items=None  # This hides the hamburger menu options
 )
+
+# Hide menu, footer, and header
+hide_streamlit_style = """
+    <style>
+        /* Hide hamburger menu */
+        #MainMenu {visibility: hidden;}
+        /* Hide footer */
+        footer {vaisibility: hidden;}
+        /* Hide header */
+        header {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 
 # ----------------- MODERN STYLING -----------------
 st.markdown("""
