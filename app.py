@@ -1143,9 +1143,48 @@ top_probs = np.array([0.0])
 def load_models():
     bert_tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
     bert_model = DistilBertModel.from_pretrained("distilbert-base-uncased", output_attentions=True)
+    bert_model.eval()
     gpt2_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     gpt2_model = GPT2LMHeadModel.from_pretrained("gpt2")
+    gpt2_model.eval()
     return bert_tokenizer, bert_model, gpt2_tokenizer, gpt2_model
+
+
+@st.cache_data
+def run_bert_inference(_bert_tokenizer, _bert_model, prompt_text):
+    """Run DistilBERT forward pass and cache results by prompt.
+
+    The leading underscore on _bert_tokenizer and _bert_model tells Streamlit
+    to skip hashing those arguments (they are excluded from the cache key and
+    are never serialized). Only the returned tensors/lists are stored.
+    """
+    inputs = _bert_tokenizer(prompt_text, return_tensors="pt")
+    tokens = _bert_tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
+    with torch.inference_mode():
+        bert_outputs = _bert_model(**inputs)
+        embeddings = bert_outputs.last_hidden_state[0].detach()
+        attentions = tuple(a.detach() for a in bert_outputs.attentions)
+    return inputs, tokens, embeddings, attentions
+
+
+@st.cache_data
+def run_gpt2_next_token(_gpt2_tokenizer, _gpt2_model, prompt_text):
+    """Run GPT-2 next-token prediction and cache results by prompt.
+
+    The leading underscore on _gpt2_tokenizer and _gpt2_model tells Streamlit
+    to skip hashing those arguments (they are excluded from the cache key and
+    are never serialized). Only the returned arrays/lists are stored.
+    """
+    gpt_inputs = _gpt2_tokenizer(prompt_text, return_tensors="pt")
+    with torch.inference_mode():
+        out = _gpt2_model(**gpt_inputs)
+        logits = out.logits[0, -1]
+        probs = torch.softmax(logits, dim=0)
+    topk = torch.topk(probs, 10)
+    top_tokens = [_gpt2_tokenizer.decode([i]) for i in topk.indices]
+    top_probs = topk.values.numpy()
+    return top_tokens, top_probs
+
 
 with st.spinner("🚀 Loading models..."):
     bert_tokenizer, bert_model, gpt2_tokenizer, gpt2_model = load_models()
@@ -1174,7 +1213,7 @@ else:
     prompt = st.session_state.get('prompt', default_prompt)
 
 # store current prompt in session state
-    st.session_state['prompt'] = prompt
+st.session_state['prompt'] = prompt
 
 # Welcome/Quick Start Card
 st.markdown("""
@@ -1209,12 +1248,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-inputs = bert_tokenizer(prompt, return_tensors="pt")
-tokens = bert_tokenizer.convert_ids_to_tokens(inputs["input_ids"][0])
-with torch.no_grad():
-    bert_outputs = bert_model(**inputs)
-    embeddings = bert_outputs.last_hidden_state[0]
-    attentions = bert_outputs.attentions
+inputs, tokens, embeddings, attentions = run_bert_inference(bert_tokenizer, bert_model, prompt)
 
 # Learning path & preferences
 st.sidebar.markdown("""
@@ -1867,14 +1901,7 @@ if sections["Next Token"]:
     if show_equations:
         st.latex(r"P(next\_token | context) = softmax(output\_logits)")
     
-    gpt_inputs = gpt2_tokenizer(prompt, return_tensors="pt")
-    with torch.no_grad():
-        out = gpt2_model(**gpt_inputs)
-        logits = out.logits[0, -1]
-        probs = torch.softmax(logits, dim=0)
-    topk = torch.topk(probs, 10)
-    top_tokens = [gpt2_tokenizer.decode([i]) for i in topk.indices]
-    top_probs = topk.values.numpy()
+    top_tokens, top_probs = run_gpt2_next_token(gpt2_tokenizer, gpt2_model, prompt)
     
     # apply a pulsing card style if intrusive mode is enabled
     card_cls = 'pulse-card' if intrusive_mode else ''
@@ -1952,14 +1979,21 @@ if sections["Text Generation"]:
     if generate_btn:
         ids = gpt2_tokenizer(prompt, return_tensors="pt")["input_ids"]
         output = prompt
-        
+        past_key_values = None
+
         st.markdown("### 📝 Generated Output")
         progress_bar = st.progress(0)
         placeholder = st.empty()
-        
+
         for i in range(max_steps):
-            with torch.no_grad():
-                out = gpt2_model(ids)
+            with torch.inference_mode():
+                model_input = ids if past_key_values is None else ids[:, -1:]
+                out = gpt2_model(
+                    model_input,
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                )
+                past_key_values = out.past_key_values
                 probs = torch.softmax(out.logits[0, -1], dim=0)
             next_id = torch.argmax(probs).unsqueeze(0).unsqueeze(0)
             next_token = gpt2_tokenizer.decode(next_id[0])
